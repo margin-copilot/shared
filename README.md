@@ -22,7 +22,7 @@ How these fit together: [security model](https://github.com/margin-copilot/docs/
 dependencies = ["margin-copilot-shared"]
 
 [tool.uv.sources]
-margin-copilot-shared = { git = "https://github.com/margin-copilot/shared", tag = "v0.1.0" }
+margin-copilot-shared = { git = "https://github.com/margin-copilot/shared", tag = "v0.1.1" }
 ```
 
 ## Test
