@@ -10,10 +10,14 @@ TOKEN_EXCHANGE_SCOPE = "api://AzureADTokenExchange/.default"
 
 
 class OboFailed(Exception):
-    def __init__(self, error: str, claims: str | None = None) -> None:
-        super().__init__(error)
+    def __init__(
+        self, error: str, claims: str | None = None, error_codes: tuple[int, ...] = ()
+    ) -> None:
+        codes = " ".join(f"AADSTS{code}" for code in error_codes)
+        super().__init__(f"{error} {codes}".strip())
         self.error = error
         self.claims = claims
+        self.error_codes = error_codes
 
 
 def managed_identity_assertion(managed_identity_client_id: str) -> Callable[[], str]:
@@ -41,5 +45,9 @@ class OboClient:
         # by (token hash, scopes) if latency matters.
         result = self._app.acquire_token_on_behalf_of(user_token, list(scopes))
         if "access_token" not in result:
-            raise OboFailed(result.get("error", "unknown_error"), result.get("claims"))
+            raise OboFailed(
+                result.get("error", "unknown_error"),
+                result.get("claims"),
+                tuple(result.get("error_codes", ())),
+            )
         return result["access_token"]

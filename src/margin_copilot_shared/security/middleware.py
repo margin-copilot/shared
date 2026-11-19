@@ -21,7 +21,9 @@ class AuthMiddleware:
         self.public_paths = public_paths
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope["path"] in self.public_paths:
+        if scope["type"] == "lifespan" or (
+            scope["type"] == "http" and scope["path"] in self.public_paths
+        ):
             await self.app(scope, receive, send)
             return
         token = _bearer_token(scope)
@@ -30,7 +32,11 @@ class AuthMiddleware:
                 raise TokenRejected(401, "missing bearer token")
             caller = self.validator.validate(token)
         except TokenRejected as rejected:
-            await _reject(send, rejected)
+            if scope["type"] == "websocket":
+                await receive()  # websocket.connect
+                await send({"type": "websocket.close", "code": 1008})
+            else:
+                await _reject(send, rejected)
             return
         scope["user"] = SimpleUser(caller.oid)
         with request_scope(RequestContext(caller=caller, token=token)):

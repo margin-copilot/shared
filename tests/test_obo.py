@@ -26,3 +26,12 @@ def test_exchange_failure_raises_with_the_error_code_and_claims():
     with pytest.raises(OboFailed) as info:
         obo.exchange("user-token", ["api://next/access_as_user"])
     assert (info.value.error, info.value.claims) == ("interaction_required", '{"access_token":{}}')
+
+
+def test_failure_keeps_the_entra_error_codes():
+    stub = StubMsal({"error": "invalid_client", "error_codes": [70021]})
+    obo = OboClient("tenant", "client", lambda: "assertion", app=stub)
+    with pytest.raises(OboFailed) as info:
+        obo.exchange("user-token", ["api://next/access_as_user"])
+    assert info.value.error_codes == (70021,)
+    assert str(info.value) == "invalid_client AADSTS70021"

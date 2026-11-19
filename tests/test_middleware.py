@@ -99,3 +99,39 @@ async def test_context_is_cleared_after_the_request(client, issuer):
 def test_request_context_repr_hides_the_token():
     caller = Caller(oid="u", tid="t", azp="a", scopes=frozenset())
     assert "secret-token" not in repr(RequestContext(caller=caller, token="secret-token"))
+
+
+async def websocket_handshake(issuer, headers):
+    """Drives AuthMiddleware over raw ASGI; returns what reached the client."""
+
+    async def echo_caller(scope, receive, send):
+        await receive()
+        await send({"type": "websocket.accept"})
+        await send({"type": "websocket.send", "text": current_request().caller.oid})
+
+    validator = issuer.validator(audience=API, allowed_callers=frozenset({CLIENT}))
+    middleware = AuthMiddleware(echo_caller, validator=validator)
+    sent = []
+
+    async def receive():
+        return {"type": "websocket.connect"}
+
+    async def send(message):
+        sent.append(message)
+
+    scope = {"type": "websocket", "path": "/ws", "headers": headers}
+    await middleware(scope, receive, send)
+    return sent
+
+
+async def test_websocket_without_token_is_closed_with_policy_violation(issuer):
+    assert await websocket_handshake(issuer, []) == [{"type": "websocket.close", "code": 1008}]
+
+
+async def test_websocket_with_valid_token_sees_its_caller(issuer):
+    token = issuer.issue(audience=API, azp=CLIENT, oid="user-ws")
+    sent = await websocket_handshake(issuer, [(b"authorization", f"Bearer {token}".encode())])
+    assert sent == [
+        {"type": "websocket.accept"},
+        {"type": "websocket.send", "text": "user-ws"},
+    ]
