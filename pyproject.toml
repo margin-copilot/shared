@@ -1,12 +1,13 @@
 [project]
 name = "margin-copilot-shared"
-version = "0.1.1"
-description = "Security module shared by the Margin Copilot services: token checks, request context, OBO."
+version = "0.2.0"
+description = "Shared by the Margin Copilot services: reply contracts, token checks, request context, OBO."
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "azure-identity==1.27.0",
   "cryptography==50.0.2",
   "msal==1.39.0",
+  "pydantic==2.14.3",
   "pyjwt[crypto]==2.15.1",
   "starlette==1.10.0",
 ]
