@@ -25,6 +25,8 @@ class Caller:
     tid: str
     azp: str
     scopes: frozenset[str]
+    groups: frozenset[str] = frozenset()  # Entra group object IDs, when the app requests them
+    groups_overage: bool = False  # too many groups for the token: callers must fail closed
 
 
 @dataclass(frozen=True)
@@ -71,7 +73,18 @@ class TokenValidator:
             raise TokenRejected(403, "missing scope")
         if claims["azp"] not in policy.allowed_callers:
             raise TokenRejected(403, "calling app not allowed")
-        return Caller(oid=claims["oid"], tid=claims["tid"], azp=claims["azp"], scopes=scopes)
+        groups = claims.get("groups", [])
+        if not isinstance(groups, list) or not all(isinstance(g, str) for g in groups):
+            raise TokenRejected(401, "malformed groups claim")
+        overage = "groups" in claims.get("_claim_names", {}) or bool(claims.get("hasgroups"))
+        return Caller(
+            oid=claims["oid"],
+            tid=claims["tid"],
+            azp=claims["azp"],
+            scopes=scopes,
+            groups=frozenset() if overage else frozenset(groups),
+            groups_overage=overage,
+        )
 
 
 def entra_validator(

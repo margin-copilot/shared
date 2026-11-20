@@ -98,3 +98,27 @@ def test_entra_validator_rejects_local_issuer_tokens_without_network(issuer):
     validator = entra_validator(issuer.tenant_id, API, frozenset({CLIENT}))
     token = issuer.issue(audience=API, azp=CLIENT)
     assert rejected(validator, token) == (401, "wrong issuer")
+
+
+def test_groups_come_from_the_token(issuer, validator):
+    caller = validator.validate(issuer.issue(audience=API, azp=CLIENT, groups=["g1", "g2"]))
+    assert caller.groups == frozenset({"g1", "g2"})
+    assert caller.groups_overage is False
+
+
+def test_no_groups_claim_means_no_groups(issuer, validator):
+    caller = validator.validate(issuer.issue(audience=API, azp=CLIENT))
+    assert caller.groups == frozenset()
+    assert caller.groups_overage is False
+
+
+@pytest.mark.parametrize("overage", [{"_claim_names": {"groups": "src1"}}, {"hasgroups": True}])
+def test_group_overage_is_flagged(issuer, validator, overage):
+    caller = validator.validate(issuer.issue(audience=API, azp=CLIENT, **overage))
+    assert caller.groups_overage is True
+    assert caller.groups == frozenset()
+
+
+def test_a_groups_claim_that_isnt_a_list_of_strings_is_rejected(issuer, validator):
+    token = issuer.issue(audience=API, azp=CLIENT, groups="g1")
+    assert rejected(validator, token) == (401, "malformed groups claim")
