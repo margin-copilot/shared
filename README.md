@@ -12,6 +12,7 @@ Part of **Margin Copilot**, a secure multi-agent pricing assistant on Azure, bui
 - `margin_copilot_shared.security.middleware.AuthMiddleware`: pure ASGI; rejects requests without a valid bearer token and makes the caller available to the request's code through `security.context.current_request()`.
 - `margin_copilot_shared.security.obo`: on-behalf-of exchange, authenticated by a federated credential that trusts the service's managed identity (no secrets).
 - `margin_copilot_shared.contracts.AgentReply`: what an agent sends back over A2A (`answer`, `refusal`, `citations` like `PP-04 §3.2`, at most 12). Receivers validate it; it rejects unknown fields, malformed citations and answers over 4,000 characters.
+- `margin_copilot_shared.contracts.DraftRequest`, `Proposal`, `ProposalError`: the action agent ↔ proposals-api contract. A draft names a product, an optional region, and exactly one of a new price or a percent. It can't carry a tier or a current price: proposals-api reads those itself. Money has two decimals.
 - `margin_copilot_shared.testing.issuer.LocalIssuer`: signs tokens locally for tests and `ADAPTERS=fake`. Deployed services never trust it.
 
 How these fit together: [security model](https://github.com/margin-copilot/docs/blob/main/security-model.md).
@@ -23,7 +24,7 @@ How these fit together: [security model](https://github.com/margin-copilot/docs/
 dependencies = ["margin-copilot-shared"]
 
 [tool.uv.sources]
-margin-copilot-shared = { git = "https://github.com/margin-copilot/shared", tag = "v0.3.0" }
+margin-copilot-shared = { git = "https://github.com/margin-copilot/shared", tag = "v0.4.0" }
 ```
 
 ## Test
